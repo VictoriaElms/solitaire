@@ -33,7 +33,7 @@ class SolitaireApp(tk.Tk):
         self.card_frames = None
         self.canvas = None
         self.title('Solitaire')
-        self.geometry('900x900')  # Increased height to accommodate buttons at the bottom
+        self.geometry('900x900')
         self.deck = Deck()
         self.image_refs = []  # Initialize image_refs here
         self.score = 0  # Initialize the score here
@@ -45,10 +45,10 @@ class SolitaireApp(tk.Tk):
         # Load empty slot image
         self.empty_slot_image = PhotoImage(file=os.path.join(os.path.dirname(__file__), '..', 'assets', 'cards', 'sempty_slot.png'))
 
-        self.create_tableau()  # Ensure this is called before setup_ui
+        self.create_tableau()
         self.setup_ui()
         self.update_timer()  # Start the timer
-        self.moves_history = []  # Initialize move history for undo functionality
+        self.moves_history = []
 
     def setup_ui(self):
         self.canvas = tk.Canvas(self, width=900, height=900, bg='green')
@@ -285,7 +285,7 @@ class SolitaireApp(tk.Tk):
         self.foundations = [[] for _ in range(4)]  # Reset foundations
         self.waste_pile = []  # Reset waste pile
         self.stock_pile = self.deck.cards  # Reset stock pile
-        self.image_refs.clear()  # Clear old image references
+        self.image_refs.clear()
         self.display_tableau()
         self.display_stock_pile()
         self.display_waste_pile()
