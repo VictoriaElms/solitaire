@@ -33,7 +33,7 @@ class SolitaireApp(tk.Tk):
         self.card_frames = None
         self.canvas = None
         self.title('Solitaire')
-        self.geometry('900x900')
+        self.geometry('1100x900')  # Increased width to give more space
         self.deck = Deck()
         self.image_refs = []  # Initialize image_refs here
         self.score = 0  # Initialize the score here
@@ -41,14 +41,15 @@ class SolitaireApp(tk.Tk):
         self.cumulative_vegas_score = 0  # Initialize cumulative Vegas score
         self.start_time = time.time()  # Track the start time of the game
         self.moves = 0  # Initialize move counter
+        self.game_over = False  # Flag to track if the game is over
 
         # Load empty slot image
         self.empty_slot_image = PhotoImage(file=os.path.join(os.path.dirname(__file__), '..', 'assets', 'cards', 'sempty_slot.png'))
 
-        self.create_tableau()
+        self.create_tableau()  # Ensure this is called before setup_ui
         self.setup_ui()
         self.update_timer()  # Start the timer
-        self.moves_history = []
+        self.moves_history = []  # Initialize move history for undo functionality
 
     def setup_ui(self):
         self.canvas = tk.Canvas(self, width=900, height=900, bg='green')
@@ -78,19 +79,19 @@ class SolitaireApp(tk.Tk):
 
         # Create New Game Button above the foundation boxes
         self.new_game_button = tk.Button(self, text="New Game", command=self.new_game)
-        self.canvas.create_window(350, 10, anchor='nw', window=self.new_game_button)
+        self.canvas.create_window(650, 10, anchor='nw', window=self.new_game_button)
 
         # Create Score Label
         self.score_label = tk.Label(self, text=f"Score: {self.score}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(460, 10, anchor='nw', window=self.score_label)
+        self.canvas.create_window(760, 10, anchor='nw', window=self.score_label)
 
         # Create Moves Label
         self.moves_label = tk.Label(self, text=f"Moves: {self.moves}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(570, 10, anchor='nw', window=self.moves_label)
+        self.canvas.create_window(870, 10, anchor='nw', window=self.moves_label)
 
         # Create Timer Label
         self.timer_label = tk.Label(self, text="Time: 0:00", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(680, 10, anchor='nw', window=self.timer_label)
+        self.canvas.create_window(980, 10, anchor='nw', window=self.timer_label)
 
         # Display cards in tableau
         self.display_tableau()
@@ -100,13 +101,13 @@ class SolitaireApp(tk.Tk):
 
         # Create Undo Buttons at the bottom
         self.undo_all_button = tk.Button(self, text="Undo All Moves", command=self.undo_all_moves)
-        self.canvas.create_window(200, 850, anchor='nw', window=self.undo_all_button)
+        self.canvas.create_window(300, 850, anchor='nw', window=self.undo_all_button)
 
         self.undo_last_button = tk.Button(self, text="Undo Last Move", command=self.undo_last_move)
-        self.canvas.create_window(400, 850, anchor='nw', window=self.undo_last_button)
+        self.canvas.create_window(500, 850, anchor='nw', window=self.undo_last_button)
 
         self.vegas_mode_button = tk.Button(self, text="Switch to Vegas Mode", command=self.switch_to_vegas_mode)
-        self.canvas.create_window(600, 850, anchor='nw', window=self.vegas_mode_button)
+        self.canvas.create_window(700, 850, anchor='nw', window=self.vegas_mode_button)
 
     def display_empty_slot(self, frame):
         empty_label = tk.Label(frame, image=self.empty_slot_image, bg='green', bd=0, highlightthickness=0)
@@ -114,10 +115,11 @@ class SolitaireApp(tk.Tk):
         empty_label.bind('<Button-1>', lambda e: self.restock_from_waste())
 
     def update_timer(self):
-        elapsed_time = int(time.time() - self.start_time)
-        minutes, seconds = divmod(elapsed_time, 60)
-        self.timer_label.config(text=f"Time: {minutes}:{seconds:02d}")
-        self.after(1000, self.update_timer)  # Update timer every second
+        if not self.game_over:
+            elapsed_time = int(time.time() - self.start_time)
+            minutes, seconds = divmod(elapsed_time, 60)
+            self.timer_label.config(text=f"Time: {minutes}:{seconds:02d}")
+            self.after(1000, self.update_timer)  # Update timer every second
 
     def create_tableau(self):
         self.tableau = [[] for _ in range(7)]
@@ -135,11 +137,19 @@ class SolitaireApp(tk.Tk):
             for widget in frame.winfo_children():
                 widget.destroy()
             if self.tableau[i]:
+                num_cards = len(self.tableau[i])
+                # Calculate dynamic height needed for the frame
+                frame_height = min(600, 30 * num_cards + 120)  # Minimum frame height adjusted
+                frame.config(height=frame_height)  # Dynamically adjust frame height
+                y_offset = min(30, frame_height // max(num_cards, 1))  # Dynamic offset to fit within the frame
+
                 for j, card in enumerate(self.tableau[i]):
                     card_label = tk.Label(frame, image=card.display(), bd=0, highlightthickness=0)
-                    card_label.place(x=0, y=30 * j)  # Adjust y to create cascading effect
+                    card_label.place(x=0, y=y_offset * j)  # Adjust y to create cascading effect
                     card_label.bind('<Button-1>', lambda e, c=card, p=i: self.on_card_click(c, p))
                     self.image_refs.append(card.photo_image)
+            else:
+                self.display_empty_slot(frame)  # Display empty slot if tableau is empty
 
     def display_stock_pile(self):
         for widget in self.stock_pile_frame.winfo_children():
@@ -204,10 +214,12 @@ class SolitaireApp(tk.Tk):
 
     def on_card_click(self, card, pile_index):
         if not card.is_face_up:
-            card.flip()
-            self.moves_history.append(('flip', card))
-            self.display_tableau()
-            self.update_moves(1)  # Increment move counter
+            # Only allow flipping if this card is the last face-down card in its pile
+            if self.is_top_card(card, pile_index):
+                card.flip()
+                self.moves_history.append(('flip', card))
+                self.display_tableau()
+                self.update_moves(1)  # Increment move counter
             return
 
         if pile_index == -1:  # Clicked from waste pile
@@ -220,6 +232,7 @@ class SolitaireApp(tk.Tk):
                     self.display_waste_pile()
                     self.display_foundations()
                     self.update_moves(1)  # Increment move counter
+                    self.check_game_over()  # Check if game is over
                     return
 
             for i in range(7):
@@ -249,10 +262,12 @@ class SolitaireApp(tk.Tk):
                 self.display_tableau()
                 self.display_foundations()
                 self.update_moves(1)  # Increment move counter
+                self.check_game_over()  # Check if game is over
                 return
 
         for i in range(7):
             if i != pile_index and self.tableau[i] and card.can_stack_on(self.tableau[i][-1]):
+                build_index = self.tableau[pile_index].index(card)
                 move_stack(card, self.tableau[pile_index], self.tableau[i])
                 self.update_score(5)  # Increment score for moving card in tableau
                 self.moves_history.append(('move', card, pile_index, i, 'tableau'))
@@ -275,6 +290,24 @@ class SolitaireApp(tk.Tk):
             self.display_tableau()
             self.update_moves(1)  # Increment move counter
 
+    def is_top_card(self, card, pile_index):
+        """
+        Check if the card is the top card in the tableau pile.
+        """
+        if pile_index == -1:
+            return False
+        pile = self.tableau[pile_index]
+        return pile and pile[-1] == card
+
+    def check_game_over(self):
+        # Check if all cards are in foundations
+        if all(len(foundation) == 13 for foundation in self.foundations):
+            self.game_over = True
+            self.display_game_over_message()
+
+    def display_game_over_message(self):
+        self.canvas.create_text(550, 450, text="GAME OVER", font=('Helvetica', 36, 'bold'), fill='red')
+
     def update_moves(self, increment):
         self.moves += increment
         self.moves_label.config(text=f"Moves: {self.moves}")
@@ -285,11 +318,12 @@ class SolitaireApp(tk.Tk):
         self.foundations = [[] for _ in range(4)]  # Reset foundations
         self.waste_pile = []  # Reset waste pile
         self.stock_pile = self.deck.cards  # Reset stock pile
-        self.image_refs.clear()
+        self.image_refs.clear()  # Clear old image references
         self.display_tableau()
         self.display_stock_pile()
         self.display_waste_pile()
         self.display_foundations()
+        self.game_over = False  # Reset game over flag
         if self.vegas_mode:
             self.score = -52  # Start with -52 points in Vegas mode
         else:
