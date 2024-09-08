@@ -257,6 +257,7 @@ class SolitaireApp(tk.Tk):
             return
 
         if pile_index == -1:  # Clicked from waste pile
+            # Vegas or Standard mode logic to move a valid stack of cards from waste to foundation/tableau
             for i, foundation in enumerate(self.foundations):
                 if card.can_move_to_foundation(foundation):
                     self.foundations[i].append(card)
@@ -269,6 +270,7 @@ class SolitaireApp(tk.Tk):
                     self.check_game_over()  # Check if game is over
                     return
 
+            # Move cards from waste pile to tableau
             for i in range(7):
                 if not self.tableau[i] and card.rank == 13:  # Move king to empty tableau pile
                     move_stack(card, self.waste_pile, self.tableau[i])
@@ -302,8 +304,12 @@ class SolitaireApp(tk.Tk):
 
         for i in range(7):
             if i != pile_index and self.tableau[i] and card.can_stack_on(self.tableau[i][-1]):
+                # Find the index of the clicked card in its tableau pile
                 build_index = self.tableau[pile_index].index(card)
-                if build_index == len(self.tableau[pile_index]) - 1:  # Ensure it's the top card
+                # Ensure all the cards from the clicked card onwards can be moved as a stack
+                if all(self.tableau[pile_index][j].can_stack_on(self.tableau[pile_index][j - 1]) for j in
+                       range(build_index + 1, len(self.tableau[pile_index]))):
+                    # Move the entire stack starting from the clicked card
                     move_stack(card, self.tableau[pile_index], self.tableau[i])
                     self.update_score(5)  # Increment score for moving card in tableau
                     self.moves_history.append(('move', card, pile_index, i, 'tableau'))
@@ -386,8 +392,8 @@ class SolitaireApp(tk.Tk):
             self.undo_last_button.config(state=tk.NORMAL)
             self.undo_all_button.config(state=tk.NORMAL)
 
-        # Save the initial state of the game
-        self.save_initial_state()
+            # Save the initial state of the game
+            self.save_initial_state()
 
     def update_score(self, points):
         self.score += points
@@ -438,13 +444,16 @@ class SolitaireApp(tk.Tk):
         if not hasattr(self, 'initial_tableau_states'):
             self.initial_tableau_states = []
 
+            # Ensure we are capturing the initial state after game setup
         self.initial_deck = self.deck.cards.copy()
         self.initial_tableau = [[card for card in pile] for pile in self.tableau]
-        self.initial_foundations = [[] for _ in range(4)]
-        self.initial_waste_pile = []
-        self.initial_stock_pile = self.initial_deck.copy()
+        self.initial_foundations = [pile.copy() for pile in self.foundations]
+        self.initial_waste_pile = self.waste_pile.copy()
+        self.initial_stock_pile = self.stock_pile.copy()
         # Capture the flipped state of each card in tableau
         self.initial_tableau_states = [[card.is_face_up for card in pile] for pile in self.tableau]
+
+
 
     def undo_all_moves(self):
         if not self.vegas_mode and hasattr(self, 'initial_deck'):
@@ -463,10 +472,10 @@ class SolitaireApp(tk.Tk):
                     card.is_face_up = initial_state
                     card.photo_image = card.load_image(card.front_image if card.is_face_up else card.back_image)
 
-                    # Reset the stockpile to show cards face-down
-        for card in self.stock_pile:
-            card.is_face_up = False
-            card.photo_image = card.load_image(card.back_image)
+            # Reset the stockpile to show cards face-down
+            for card in self.stock_pile:
+                card.is_face_up = False
+                card.photo_image = card.load_image(card.back_image)
 
             self.display_tableau()
             self.display_stock_pile()
@@ -485,11 +494,11 @@ class SolitaireApp(tk.Tk):
         self.new_game()  # Start a new game in Vegas mode
         if self.vegas_mode:
             self.vegas_mode_button.config(text="Switch to Standard Mode")
+            self.waste_pile = []  # Reset waste pile
+            self.display_waste_pile()  # Redraw the waste pile
         else:
             self.vegas_mode_button.config(text="Switch to Vegas Mode")
-
-        # Redraw the waste pile based on the current mode
-        self.display_waste_pile()
+            self.display_waste_pile()  # Redraw the waste pile
 
     def move_stack(self, card, from_pile, to_pile):
         index = from_pile.index(card)
