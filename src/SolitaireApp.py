@@ -67,24 +67,24 @@ class SolitaireApp(tk.Tk):
         self.tableau_frames = []
         for i in range(7):
             frame = tk.Frame(self, width=120, height=600, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(120 * i + 60, 250, anchor='nw', window=frame)
+            self.canvas.create_window(120 * i + 60, 300, anchor='nw', window=frame)  # Moved lower from 250 to 300
             self.tableau_frames.append(frame)
 
             # Adjust positions of the stockpile and waste pile to allow for 3-card draw spacing
             self.stock_pile_frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(50, 50, anchor='nw', window=self.stock_pile_frame)
+            self.canvas.create_window(50, 100, anchor='nw', window=self.stock_pile_frame)
 
             # Update the width of waste_pile_frame to give more space for displaying 3 cards
-            self.waste_pile_frame = tk.Frame(self, width=100 + 2 * 20, height=150, bg='green', bd=0,
-                                             highlightthickness=0)
-            self.canvas.create_window(170, 50, anchor='nw', window=self.waste_pile_frame)
+            self.waste_pile_frame = tk.Frame(self, width=180, height=150, bg='green', bd=0, highlightthickness=0)
+            self.canvas.create_window(170, 100, anchor='nw', window=self.waste_pile_frame)
 
         # Adjust the x position to move foundation frames further to the right
         self.foundation_frames = []
         foundation_start_x = 370  # Moved further to the right to create more space for the 3-card draw
         for i in range(4):
             frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(foundation_start_x + 110 * i, 50, anchor='nw', window=frame)
+            self.canvas.create_window(foundation_start_x + 110 * i, 100, anchor='nw',
+                                      window=frame)  # Moved lower from 50 to 100
             self.foundation_frames.append(frame)
 
         # Create New Game Button above the foundation boxes
