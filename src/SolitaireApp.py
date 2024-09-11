@@ -75,7 +75,9 @@ class SolitaireApp(tk.Tk):
             self.canvas.create_window(50, 100, anchor='nw', window=self.stock_pile_frame)
 
             # Update the width of waste_pile_frame to give more space for displaying 3 cards
-            self.waste_pile_frame = tk.Frame(self, width=180, height=150, bg='green', bd=0, highlightthickness=0)
+            self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
+            if self.vegas_mode:
+                self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
             self.canvas.create_window(170, 100, anchor='nw', window=self.waste_pile_frame)
 
         # Adjust the x position to move foundation frames further to the right
@@ -177,26 +179,31 @@ class SolitaireApp(tk.Tk):
             self.display_empty_slot(self.stock_pile_frame)
 
     def display_waste_pile(self):
+        # Clear the waste pile frame
         for widget in self.waste_pile_frame.winfo_children():
             widget.destroy()
+
         if self.waste_pile:
-            # Display the last 3 cards from the waste pile with overlapping
             if self.vegas_mode:
-                # Ensure there's enough space for three cards to overlap
-                for i, card in enumerate(self.waste_pile[-3:]):
+                # Vegas mode: display up to 3 cards with overlapping
+                num_cards = min(3, len(self.waste_pile))  # Show up to 3 cards
+                for i, card in enumerate(self.waste_pile[-num_cards:]):
                     card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
-                    card_label.place(x=i * 30, y=0)  # Adjust x offset to create more visible overlap
+                    # Adjust card placement for better overlap (increase frame size and reduce overlap)
+                    card_label.place(x=i * 25, y=0)  # Adjust x-offset to 25 for better visibility
                     self.image_refs.append(card.photo_image)
                     card_label.bind('<Button-1>',
-                                    lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
+                                    lambda e, c=card: self.on_card_click(c, -1))  # Waste pile uses index -1
             else:
-                # In standard mode, only show the top card of the waste pile
+                # Standard mode: display only the top card
                 card = self.waste_pile[-1]
                 card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
                 card_label.pack()
-                card_label.bind('<Button-1>',
-                                lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
+                card_label.bind('<Button-1>', lambda e, c=card: self.on_card_click(c, -1))  # Waste pile uses index -1
                 self.image_refs.append(card.photo_image)
+        else:
+            # Show an empty slot if the waste pile is empty
+            self.display_empty_slot(self.waste_pile_frame)
 
     def display_foundations(self):
         for i, frame in enumerate(self.foundation_frames):
@@ -247,91 +254,100 @@ class SolitaireApp(tk.Tk):
             self.display_waste_pile()
 
     def on_card_click(self, card, pile_index):
+        # If the card is not face up, handle flipping it
         if not card.is_face_up:
-            # Only allow flipping if this card is the last face-down card in its pile
+            # Only allow flipping if this card is the topmost face-down card in the tableau
             if self.is_top_card(card, pile_index):
                 card.flip()
-                self.moves_history.append(('flip', card))
-                self.display_tableau()
+                self.moves_history.append(('flip', card))  # Record the flip in move history
+                self.display_tableau()  # Refresh the tableau display
                 self.update_moves(1)  # Increment move counter
             return
 
-        if pile_index == -1:  # Clicked from waste pile
-            # Vegas or Standard mode logic to move a valid stack of cards from waste to foundation/tableau
+        # Handle moving cards from the waste pile (pile_index == -1)
+        if pile_index == -1:
+            # Check if the card can be moved from waste pile to the foundation
             for i, foundation in enumerate(self.foundations):
                 if card.can_move_to_foundation(foundation):
-                    self.foundations[i].append(card)
-                    self.waste_pile.remove(card)
-                    self.update_score(5)  # Increment score for moving card to foundation
-                    self.moves_history.append(('move', card, -1, i, 'foundation'))
-                    self.display_waste_pile()
-                    self.display_foundations()
+                    self.foundations[i].append(card)  # Add card to foundation
+                    self.waste_pile.remove(card)  # Remove card from waste pile
+                    self.update_score(5)  # Increment score
+                    self.moves_history.append(('move', card, -1, i, 'foundation'))  # Record the move
+                    self.display_waste_pile()  # Refresh the waste pile
+                    self.display_foundations()  # Refresh foundations
                     self.update_moves(1)  # Increment move counter
                     self.check_game_over()  # Check if game is over
                     return
 
-            # Move cards from waste pile to tableau
+            # Check if the card can be moved from waste pile to the tableau
             for i in range(7):
-                if not self.tableau[i] and card.rank == 13:  # Move king to empty tableau pile
+                # Move King from waste to empty tableau spot
+                if not self.tableau[i] and card.rank == 13:  # King can be moved to an empty tableau spot
                     move_stack(card, self.waste_pile, self.tableau[i])
-                    self.moves_history.append(('move', card, -1, i, 'tableau'))
-                    self.display_tableau()
-                    self.display_waste_pile()
+                    self.moves_history.append(('move', card, -1, i, 'tableau'))  # Record the move
+                    self.display_tableau()  # Refresh tableau
+                    self.display_waste_pile()  # Refresh waste pile
                     self.update_moves(1)  # Increment move counter
                     return
 
+                # Check if the card can stack onto the top card of the tableau
                 elif self.tableau[i] and card.can_stack_on(self.tableau[i][-1]):
                     move_stack(card, self.waste_pile, self.tableau[i])
-                    self.update_score(5)  # Increment score for moving card in tableau
-                    self.moves_history.append(('move', card, -1, i, 'tableau'))
-                    self.display_tableau()
-                    self.display_waste_pile()
+                    self.update_score(5)  # Increment score
+                    self.moves_history.append(('move', card, -1, i, 'tableau'))  # Record the move
+                    self.display_tableau()  # Refresh tableau
+                    self.display_waste_pile()  # Refresh waste pile
                     self.update_moves(1)  # Increment move counter
                     return
-            # Allow movement only if this is the topmost card in the tableau pile
+
+        # Handle moving a stack or card from tableau to another tableau or foundation
+        for i in range(7):
+            if i != pile_index:
+                # Allow moving a stack that starts with a King to an empty tableau spot
+                if not self.tableau[i]:
+                    build_index = self.tableau[pile_index].index(card)
+                    # Check if the stack starts with a King
+                    if self.tableau[pile_index][build_index].rank == 13:
+                        move_stack(card, self.tableau[pile_index], self.tableau[i])  # Move the stack to empty spot
+                        self.update_score(5)  # Increment score
+                        self.moves_history.append(('move', card, pile_index, i, 'tableau'))  # Record the move
+                        self.display_tableau()  # Refresh tableau
+                        self.update_moves(1)  # Increment move counter
+                        return
+
+                # Check if the card or stack can be stacked onto the top card of the destination tableau
+                elif self.tableau[i] and card.can_stack_on(self.tableau[i][-1]):
+                    build_index = self.tableau[pile_index].index(card)
+                    # Ensure the stack is valid (alternating colors and descending rank)
+                    if all(self.tableau[pile_index][j].can_stack_on(self.tableau[pile_index][j - 1])
+                           for j in range(build_index + 1, len(self.tableau[pile_index]))):
+                        move_stack(card, self.tableau[pile_index], self.tableau[i])  # Move the stack to the tableau
+                        self.update_score(5)  # Increment score
+                        self.moves_history.append(('move', card, pile_index, i, 'tableau'))  # Record the move
+                        self.display_tableau()  # Refresh tableau
+                        self.update_moves(1)  # Increment move counter
+                        return
+
+        # Allow moving the card to the foundation if it's the topmost card
         if pile_index != -1 and self.is_top_card(card, pile_index):
             for i, foundation in enumerate(self.foundations):
                 if card.can_move_to_foundation(foundation):
-                    self.foundations[i].append(card)
-                    self.tableau[pile_index].remove(card)
-                    self.update_score(5)  # Increment score for moving card to foundation
-                    self.moves_history.append(('move', card, pile_index, i, 'foundation'))
-                    self.display_tableau()
-                    self.display_foundations()
+                    self.foundations[i].append(card)  # Move card to foundation
+                    self.tableau[pile_index].remove(card)  # Remove card from tableau
+                    self.update_score(5)  # Increment score
+                    self.moves_history.append(('move', card, pile_index, i, 'foundation'))  # Record the move
+                    self.display_tableau()  # Refresh tableau
+                    self.display_foundations()  # Refresh foundations
                     self.update_moves(1)  # Increment move counter
                     self.check_game_over()  # Check if game is over
                     return
 
-        for i in range(7):
-            if i != pile_index and self.tableau[i] and card.can_stack_on(self.tableau[i][-1]):
-                # Find the index of the clicked card in its tableau pile
-                build_index = self.tableau[pile_index].index(card)
-                # Ensure all the cards from the clicked card onwards can be moved as a stack
-                if all(self.tableau[pile_index][j].can_stack_on(self.tableau[pile_index][j - 1]) for j in
-                       range(build_index + 1, len(self.tableau[pile_index]))):
-                    # Move the entire stack starting from the clicked card
-                    move_stack(card, self.tableau[pile_index], self.tableau[i])
-                    self.update_score(5)  # Increment score for moving card in tableau
-                    self.moves_history.append(('move', card, pile_index, i, 'tableau'))
-                    self.display_tableau()
-                    self.update_moves(1)  # Increment move counter
-                    return
-
-            if i != pile_index and not self.tableau[i] and card.rank == 13:  # Move king to empty tableau spot
-                build_index = self.tableau[pile_index].index(card)
-                if build_index == len(self.tableau[pile_index]) - 1:  # Ensure it's the top card
-                    move_stack(card, self.tableau[pile_index], self.tableau[i])
-                    self.update_score(5)  # Increment score for moving card in tableau
-                    self.moves_history.append(('move', card, pile_index, i, 'tableau'))
-                    self.display_tableau()
-                    self.update_moves(1)  # Increment move counter
-                    return
-
-        if not self.tableau[pile_index] and card.rank == 13:  # Move king to empty tableau spot
+        # Handle moving a King or a stack starting with a King to an empty tableau spot
+        if not self.tableau[pile_index] and card.rank == 13:  # King can be moved to an empty tableau spot
             move_stack(card, self.tableau[pile_index], self.tableau[pile_index])
-            self.update_score(5)  # Increment score for moving card in tableau
-            self.moves_history.append(('move', card, pile_index, pile_index, 'tableau'))
-            self.display_tableau()
+            self.update_score(5)  # Increment score
+            self.moves_history.append(('move', card, pile_index, pile_index, 'tableau'))  # Record the move
+            self.display_tableau()  # Refresh tableau
             self.update_moves(1)  # Increment move counter
 
     def is_top_card(self, card, pile_index):
@@ -365,10 +381,13 @@ class SolitaireApp(tk.Tk):
         self.stock_pile = self.deck.cards.copy()  # Use a copy to avoid modifying the original deck
         self.stock_pile = self.deck.cards  # Reset stock pile
         self.image_refs.clear()  # Clear old image references
+
+        # Display the initial layout
         self.display_tableau()
         self.display_stock_pile()
         self.display_waste_pile()
         self.display_foundations()
+
         self.game_over = False  # Reset game over flag
         self.deck_passes = 0  # Reset deck passes counter
         if self.vegas_mode:
@@ -445,7 +464,11 @@ class SolitaireApp(tk.Tk):
             self.initial_tableau_states = []
 
             # Ensure we are capturing the initial state after game setup
-        self.initial_deck = self.deck.cards.copy()
+        if self.deck.cards:  # Make sure the deck is initialized properly
+            self.initial_deck = self.deck.cards.copy()
+        else:
+            print("Error: Deck is not initialized!")  # Debugging message
+
         self.initial_tableau = [[card for card in pile] for pile in self.tableau]
         self.initial_foundations = [pile.copy() for pile in self.foundations]
         self.initial_waste_pile = self.waste_pile.copy()
@@ -453,7 +476,8 @@ class SolitaireApp(tk.Tk):
         # Capture the flipped state of each card in tableau
         self.initial_tableau_states = [[card.is_face_up for card in pile] for pile in self.tableau]
 
-
+        # Debugging to confirm initial state is saved
+        print("Initial state saved successfully.")
 
     def undo_all_moves(self):
         if not self.vegas_mode and hasattr(self, 'initial_deck'):
@@ -491,14 +515,15 @@ class SolitaireApp(tk.Tk):
 
     def switch_to_vegas_mode(self):
         self.vegas_mode = not self.vegas_mode
-        self.new_game()  # Start a new game in Vegas mode
+        self.new_game()  # Start a new game in Vegas or Standard mode
+
         if self.vegas_mode:
             self.vegas_mode_button.config(text="Switch to Standard Mode")
-            self.waste_pile = []  # Reset waste pile
-            self.display_waste_pile()  # Redraw the waste pile
         else:
             self.vegas_mode_button.config(text="Switch to Vegas Mode")
-            self.display_waste_pile()  # Redraw the waste pile
+
+        # Redraw the waste pile after switching modes
+        self.display_waste_pile()
 
     def move_stack(self, card, from_pile, to_pile):
         index = from_pile.index(card)
