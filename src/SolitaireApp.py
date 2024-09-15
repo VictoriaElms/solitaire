@@ -179,31 +179,26 @@ class SolitaireApp(tk.Tk):
             self.display_empty_slot(self.stock_pile_frame)
 
     def display_waste_pile(self):
-        # Clear the waste pile frame
         for widget in self.waste_pile_frame.winfo_children():
             widget.destroy()
-
         if self.waste_pile:
+            # Display the last 3 cards from the waste pile with overlapping
             if self.vegas_mode:
-                # Vegas mode: display up to 3 cards with overlapping
-                num_cards = min(3, len(self.waste_pile))  # Show up to 3 cards
-                for i, card in enumerate(self.waste_pile[-num_cards:]):
+                # Ensure there's enough space for three cards to overlap
+                for i, card in enumerate(self.waste_pile[-3:]):
                     card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
-                    # Adjust card placement for better overlap
-                    card_label.place(x=i * 25, y=0)  # Adjust x-offset for better visibility
+                    card_label.place(x=i * 30, y=0)  # Adjust x offset to create more visible overlap
                     self.image_refs.append(card.photo_image)
                     card_label.bind('<Button-1>',
-                                    lambda e, c=card: self.on_card_click(c, -1))  # Waste pile uses index -1
+                                    lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
             else:
-                # Standard mode: display only the top card
+                # In standard mode, only show the top card of the waste pile
                 card = self.waste_pile[-1]
                 card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
                 card_label.pack()
-                card_label.bind('<Button-1>', lambda e, c=card: self.on_card_click(c, -1))  # Waste pile uses index -1
+                card_label.bind('<Button-1>',
+                                lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
                 self.image_refs.append(card.photo_image)
-        else:
-            # Show an empty slot if the waste pile is empty
-            self.display_empty_slot(self.waste_pile_frame)
 
     def display_foundations(self):
         for i, frame in enumerate(self.foundation_frames):
