@@ -149,7 +149,6 @@ class SolitaireApp(tk.Tk):
     def display_tableau(self):
         for i, frame in enumerate(self.tableau_frames):
             for widget in frame.winfo_children():
-                print (widget)
                 widget.destroy()
             if self.tableau[i]:
                 for j, card in enumerate(self.tableau[i]):
@@ -200,15 +199,12 @@ class SolitaireApp(tk.Tk):
     def display_updated_waste_pile(self, num):
         visable_cards = 0
         for widget in self.waste_pile_frame.winfo_children():
-            print (widget)
             visable_cards = visable_cards + 1
             widget.destroy()
         if self.waste_pile:
             # Display the last 3 cards from the waste pile with overlapping
             if self.vegas_mode:
                 card_num = -(visable_cards+num)
-                print (visable_cards)
-                print (card_num)
                 # Ensure there's enough space for three cards to overlap
                 if card_num == 0:
                     card_num = -3                                        
