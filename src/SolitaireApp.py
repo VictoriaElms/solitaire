@@ -49,6 +49,7 @@ class SolitaireApp(tk.Tk):
         self.moves = 0  # Initialize move counter
         self.game_over = False  # Flag to track if the game is over
         self.deck_passes = 0  # Track the number of passes through the deck
+        self.gameend = None
 
         # Load empty slot image
         self.empty_slot_image = PhotoImage(
@@ -76,7 +77,7 @@ class SolitaireApp(tk.Tk):
         self.canvas.create_window(155, 100, anchor='nw', window=self.stock_pile_frame)
 
         # Update the width of waste_pile_frame to give more space for displaying 3 cards
-        self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
+        self.waste_pile_frame = tk.Frame(self, width=400, height=150, bg='green', bd=0, highlightthickness=0)
         #if self.vegas_mode:
             #self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
         self.canvas.create_window(275, 105, anchor='nw', window=self.waste_pile_frame)
@@ -387,13 +388,16 @@ class SolitaireApp(tk.Tk):
 
     def display_game_over_message(self):
         self.message = tk.Label(self, text="Congratulations! You've won!", bg='green', fg='white', font=('Helvetica', 36))
-        self.canvas.create_window(550, 275, anchor='n', window=self.message, height=200, width=2000)
+        self.gameend=self.canvas.create_window(550, 275, anchor='n', window=self.message, height=200, width=2000)
 
     def update_moves(self, increment):
         self.moves += increment
         self.moves_label.config(text=f"Moves: {self.moves}")
 
     def new_game(self):
+        # Remove any existing "Game Over" message
+        self.canvas.delete(self.gameend)
+
         self.deck = Deck()
         self.create_tableau()
         self.foundations = [[] for _ in range(4)]  # Reset foundations
@@ -419,9 +423,6 @@ class SolitaireApp(tk.Tk):
         self.update_score(0)  # Update score display
         self.update_moves(0)  # Update move display
         self.moves_history.clear()  # Clear move history
-
-        # Remove any existing "Game Over" message
-        self.canvas.delete("game_over_text")
 
         # Disable undo buttons in Vegas mode
         if self.vegas_mode:
