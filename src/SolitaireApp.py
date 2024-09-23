@@ -52,7 +52,7 @@ class SolitaireApp(tk.Tk):
 
         # Load empty slot image
         self.empty_slot_image = PhotoImage(
-            file=os.path.join(os.path.dirname(__file__), '..', 'assets', 'cards', 'sempty_slot.png'))
+            file=os.path.join(os.path.dirname(__file__), '..', 'assets', 'cards', 'sempty_slot_skinny.png'))
 
         self.create_tableau()  # Ensure this is called before setup_ui
         self.setup_ui()
@@ -71,51 +71,51 @@ class SolitaireApp(tk.Tk):
             self.canvas.create_window(120 * i + 150, 300, anchor='nw', window=frame)  # Moved lower from 250 to 300
             self.tableau_frames.append(frame)
 
-            # Adjust positions of the stockpile and waste pile to allow for 3-card draw spacing
-            self.stock_pile_frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(150, 105, anchor='nw', window=self.stock_pile_frame)
+        # Adjust positions of the stockpile and waste pile to allow for 3-card draw spacing
+        self.stock_pile_frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
+        self.canvas.create_window(155, 100, anchor='nw', window=self.stock_pile_frame)
 
-            # Update the width of waste_pile_frame to give more space for displaying 3 cards
-            self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
-            #if self.vegas_mode:
-                #self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
-            self.canvas.create_window(270, 105, anchor='nw', window=self.waste_pile_frame)
+        # Update the width of waste_pile_frame to give more space for displaying 3 cards
+        self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
+        #if self.vegas_mode:
+            #self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
+        self.canvas.create_window(275, 105, anchor='nw', window=self.waste_pile_frame)
 
         # Adjust the x position to move foundation frames further to the right
         self.foundation_frames = []
         foundation_start_x = 370  # Moved further to the right to create more space for the 3-card draw
         for i in range(4):
             frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(foundation_start_x + 110 * i + 155, 100, anchor='nw',
+            self.canvas.create_window(foundation_start_x + 110 * i + 171, 100, anchor='nw',
                                       window=frame)  # Moved lower from 50 to 100
             self.foundation_frames.append(frame)
 
         # Create Undo Buttons 
         self.undo_all_button = tk.Button(self, text="Undo All Moves", command=self.undo_all_moves)
-        self.canvas.create_window(70, 10, anchor='nw', window=self.undo_all_button)
+        self.canvas.create_window(85, 12, anchor='nw', window=self.undo_all_button)
 
         self.undo_last_button = tk.Button(self, text="Undo Last Move", command=self.undo_last_move)
-        self.canvas.create_window(195, 10, anchor='nw', window=self.undo_last_button)
+        self.canvas.create_window(192, 12, anchor='nw', window=self.undo_last_button)
 
         # Toggle Vegas/Standard Mode Button
         self.vegas_mode_button = tk.Button(self, text="Switch to Vegas Mode", command=self.switch_to_vegas_mode)
-        self.canvas.create_window(600, 10, anchor='ne', window=self.vegas_mode_button)
+        self.canvas.create_window(583, 12, anchor='ne', window=self.vegas_mode_button)
 
         # Create New Game Button above the foundation boxes
         self.new_game_button = tk.Button(self, text="New Game", command=self.new_game)
-        self.canvas.create_window(700, 10, anchor='ne', window=self.new_game_button)
+        self.canvas.create_window(595, 12, anchor='nw', window=self.new_game_button)
 
         # Create Score Label
         self.score_label = tk.Label(self, text=f"Score: {self.score}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(810, 10, anchor='ne', window=self.score_label)
+        self.canvas.create_window(705, 10, anchor='nw', window=self.score_label)
 
         # Create Moves Label
         self.moves_label = tk.Label(self, text=f"Moves: {self.moves}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(920, 10, anchor='ne', window=self.moves_label)
+        self.canvas.create_window(820, 10, anchor='nw', window=self.moves_label)
 
         # Create Timer Label
         self.timer_label = tk.Label(self, text="Time: 0:00", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(1030, 10, anchor='ne', window=self.timer_label)
+        self.canvas.create_window(935, 10, anchor='nw', window=self.timer_label)
 
         # Display cards in tableau
         self.display_tableau()
@@ -125,7 +125,7 @@ class SolitaireApp(tk.Tk):
 
     def display_empty_slot(self, frame):
         empty_label = tk.Label(frame, image=self.empty_slot_image, bg='green', bd=0, highlightthickness=0)
-        empty_label.pack()
+        empty_label.place(x=0, y=0)
         empty_label.bind('<Button-1>', lambda e: self.restock_from_waste())
 
     def update_timer(self):
@@ -149,21 +149,17 @@ class SolitaireApp(tk.Tk):
     def display_tableau(self):
         for i, frame in enumerate(self.tableau_frames):
             for widget in frame.winfo_children():
+                print (widget)
                 widget.destroy()
             if self.tableau[i]:
-                num_cards = len(self.tableau[i])
-                # Calculate dynamic height needed for the frame
-                frame_height = min(600, 30 * num_cards + 120)  # Minimum frame height adjusted
-                frame.config(height=frame_height)  # Dynamically adjust frame height
-                y_offset = min(30, frame_height // max(num_cards, 1))  # Dynamic offset to fit within the frame
-
                 for j, card in enumerate(self.tableau[i]):
                     card_label = tk.Label(frame, image=card.display(), bd=0, highlightthickness=0)
-                    card_label.place(x=0, y=y_offset * j)  # Adjust y to create cascading effect
+                    card_label.place(x=5, y=5 + 25 * j) # Adjust y to create cascading effect
                     card_label.bind('<Button-1>', lambda e, c=card, p=i: self.on_card_click(c, p))
                     self.image_refs.append(card.photo_image)
             else:
-                self.display_empty_slot(frame)  # Display empty slot if tableau is empty
+                empty_label = tk.Label(frame, image=self.empty_slot_image, bg='green', bd=0, highlightthickness=0)
+                empty_label.place(x=0, y=0)  # Display empty slot if tableau is empty
 
     def display_stock_pile(self):
         for widget in self.stock_pile_frame.winfo_children():
@@ -172,7 +168,7 @@ class SolitaireApp(tk.Tk):
             # Show the back of the top card in the stock pile
             card = self.stock_pile[-1]
             card_label = tk.Label(self.stock_pile_frame, image=card.display(), bd=0, highlightthickness=0)
-            card_label.pack()
+            card_label.place(x=0, y=5)
             card_label.bind('<Button-1>', lambda e: self.flip_card())
             self.image_refs.append(card.photo_image)
         else:
@@ -239,7 +235,6 @@ class SolitaireApp(tk.Tk):
                 card = self.foundations[i][-1]
                 card_label = tk.Label(frame, image=card.display(), bd=0, highlightthickness=0)
                 card_label.place(x=i, y=5) #Adjust the cards to be in line with the blank display slot
-                #card_label.pack()
                 self.image_refs.append(card.photo_image)
             else:
                 self.display_empty_slot(frame)
@@ -380,18 +375,6 @@ class SolitaireApp(tk.Tk):
     def is_top_card(self, card, pile_index):
         """
         Check if the card is the top card in the tableau pile.
-                
-        if self.vegas_mode:
-            if pile_index == -1:
-                pile = self.waste_pile
-            else:
-                pile = self.tableau[pile_index]
-            return pile and pile[-1] == card
-        else:
-            if pile_index == -1:
-                return False
-            pile = self.tableau[pile_index]
-            return pile and pile[-1] == card
         """
 
         if pile_index == -1:
@@ -409,9 +392,6 @@ class SolitaireApp(tk.Tk):
     def display_game_over_message(self):
         self.message = tk.Label(self, text="Congratulations! You've won!", bg='green', fg='white', font=('Helvetica', 36))
         self.canvas.create_window(550, 275, anchor='n', window=self.message, height=200, width=2000)
-        #message = self.canvas.create_text(550, 300, text="Congratulations! You've won!", font=('Helvetica', 36, 'bold'), fill='red',
-        #                        tags="game_over_text")
-        #self.canvas.tag_raise(message)
 
     def update_moves(self, increment):
         self.moves += increment
