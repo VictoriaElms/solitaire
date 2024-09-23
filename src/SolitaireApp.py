@@ -66,61 +66,62 @@ class SolitaireApp(tk.Tk):
         # Create frames for tableau, stockpile, waste pile, and foundation piles
         self.tableau_frames = []
         for i in range(7):
+            # Tableau frame
             frame = tk.Frame(self, width=120, height=600, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(120 * i + 60, 300, anchor='nw', window=frame)  # Moved lower from 250 to 300
+            self.canvas.create_window(120 * i + 150, 300, anchor='nw', window=frame)  # Moved lower from 250 to 300
             self.tableau_frames.append(frame)
 
             # Adjust positions of the stockpile and waste pile to allow for 3-card draw spacing
             self.stock_pile_frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(50, 100, anchor='nw', window=self.stock_pile_frame)
+            self.canvas.create_window(150, 105, anchor='nw', window=self.stock_pile_frame)
 
             # Update the width of waste_pile_frame to give more space for displaying 3 cards
             self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
-            if self.vegas_mode:
-                self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
-            self.canvas.create_window(170, 100, anchor='nw', window=self.waste_pile_frame)
+            #if self.vegas_mode:
+                #self.waste_pile_frame.config(width=180)  # Increase width to accommodate 3 cards in Vegas mode
+            self.canvas.create_window(270, 105, anchor='nw', window=self.waste_pile_frame)
 
         # Adjust the x position to move foundation frames further to the right
         self.foundation_frames = []
         foundation_start_x = 370  # Moved further to the right to create more space for the 3-card draw
         for i in range(4):
             frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(foundation_start_x + 110 * i, 100, anchor='nw',
+            self.canvas.create_window(foundation_start_x + 110 * i + 155, 100, anchor='nw',
                                       window=frame)  # Moved lower from 50 to 100
             self.foundation_frames.append(frame)
 
+        # Create Undo Buttons 
+        self.undo_all_button = tk.Button(self, text="Undo All Moves", command=self.undo_all_moves)
+        self.canvas.create_window(70, 10, anchor='nw', window=self.undo_all_button)
+
+        self.undo_last_button = tk.Button(self, text="Undo Last Move", command=self.undo_last_move)
+        self.canvas.create_window(195, 10, anchor='nw', window=self.undo_last_button)
+
+        # Toggle Vegas/Standard Mode Button
+        self.vegas_mode_button = tk.Button(self, text="Switch to Vegas Mode", command=self.switch_to_vegas_mode)
+        self.canvas.create_window(600, 10, anchor='ne', window=self.vegas_mode_button)
+
         # Create New Game Button above the foundation boxes
         self.new_game_button = tk.Button(self, text="New Game", command=self.new_game)
-        self.canvas.create_window(700, 10, anchor='nw', window=self.new_game_button)
+        self.canvas.create_window(700, 10, anchor='ne', window=self.new_game_button)
 
         # Create Score Label
         self.score_label = tk.Label(self, text=f"Score: {self.score}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(810, 10, anchor='nw', window=self.score_label)
+        self.canvas.create_window(810, 10, anchor='ne', window=self.score_label)
 
         # Create Moves Label
         self.moves_label = tk.Label(self, text=f"Moves: {self.moves}", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(920, 10, anchor='nw', window=self.moves_label)
+        self.canvas.create_window(920, 10, anchor='ne', window=self.moves_label)
 
         # Create Timer Label
         self.timer_label = tk.Label(self, text="Time: 0:00", bg='green', fg='white', font=('Helvetica', 14))
-        self.canvas.create_window(1030, 10, anchor='nw', window=self.timer_label)
+        self.canvas.create_window(1030, 10, anchor='ne', window=self.timer_label)
 
         # Display cards in tableau
         self.display_tableau()
         self.display_stock_pile()
         self.display_waste_pile()
         self.display_foundations()
-
-        # Create Undo Buttons at the bottom
-        self.undo_all_button = tk.Button(self, text="Undo All Moves", command=self.undo_all_moves)
-        self.canvas.create_window(300, 850, anchor='nw', window=self.undo_all_button)
-
-        self.undo_last_button = tk.Button(self, text="Undo Last Move", command=self.undo_last_move)
-        self.canvas.create_window(500, 850, anchor='nw', window=self.undo_last_button)
-
-        # Toggle Vegas/Standard Mode Button
-        self.vegas_mode_button = tk.Button(self, text="Switch to Vegas Mode", command=self.switch_to_vegas_mode)
-        self.canvas.create_window(700, 850, anchor='nw', window=self.vegas_mode_button)
 
     def display_empty_slot(self, frame):
         empty_label = tk.Label(frame, image=self.empty_slot_image, bg='green', bd=0, highlightthickness=0)
@@ -200,6 +201,36 @@ class SolitaireApp(tk.Tk):
                                 lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
                 self.image_refs.append(card.photo_image)
 
+    def display_updated_waste_pile(self, num):
+        visable_cards = 0
+        for widget in self.waste_pile_frame.winfo_children():
+            print (widget)
+            visable_cards = visable_cards + 1
+            widget.destroy()
+        if self.waste_pile:
+            # Display the last 3 cards from the waste pile with overlapping
+            if self.vegas_mode:
+                card_num = -(visable_cards+num)
+                print (visable_cards)
+                print (card_num)
+                # Ensure there's enough space for three cards to overlap
+                if card_num == 0:
+                    card_num = -3                                        
+                for i, card in enumerate(self.waste_pile[card_num:]):
+                    card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
+                    card_label.place(x=i * 30, y=0)  # Adjust x offset to create more visible overlap
+                    self.image_refs.append(card.photo_image)
+                    card_label.bind('<Button-1>',
+                                    lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
+            else:
+                # In standard mode, only show the top card of the waste pile
+                card = self.waste_pile[-1]
+                card_label = tk.Label(self.waste_pile_frame, image=card.display(), bd=0, highlightthickness=0)
+                card_label.pack()
+                card_label.bind('<Button-1>',
+                                lambda e, c=card: self.on_card_click(c, -1))  # Use -1 to identify waste pile
+                self.image_refs.append(card.photo_image)
+
     def display_foundations(self):
         for i, frame in enumerate(self.foundation_frames):
             for widget in frame.winfo_children():
@@ -207,7 +238,8 @@ class SolitaireApp(tk.Tk):
             if self.foundations[i]:
                 card = self.foundations[i][-1]
                 card_label = tk.Label(frame, image=card.display(), bd=0, highlightthickness=0)
-                card_label.pack()
+                card_label.place(x=i, y=5) #Adjust the cards to be in line with the blank display slot
+                #card_label.pack()
                 self.image_refs.append(card.photo_image)
             else:
                 self.display_empty_slot(frame)
@@ -260,7 +292,7 @@ class SolitaireApp(tk.Tk):
             return
 
         # Handle moving cards from the waste pile (pile_index == -1)
-        if pile_index == -1:
+        if pile_index == -1 and self.is_top_card(card, pile_index):
             # Prioritize moving the card from waste pile to the foundation
             for i, foundation in enumerate(self.foundations):
                 if card.can_move_to_foundation(foundation):
@@ -268,7 +300,7 @@ class SolitaireApp(tk.Tk):
                     self.waste_pile.remove(card)  # Remove card from waste pile
                     self.update_score(5)  # Increment score
                     self.moves_history.append(('move', card, -1, i, 'foundation'))  # Record the move
-                    self.display_waste_pile()  # Refresh the waste pile
+                    self.display_updated_waste_pile(-1)  # Refresh the waste pile
                     self.display_foundations()  # Refresh foundations
                     self.update_moves(1)  # Increment move counter
                     self.check_game_over()  # Check if game is over
@@ -281,7 +313,7 @@ class SolitaireApp(tk.Tk):
                     move_stack(card, self.waste_pile, self.tableau[i])
                     self.moves_history.append(('move', card, -1, i, 'tableau'))  # Record the move
                     self.display_tableau()  # Refresh tableau
-                    self.display_waste_pile()  # Refresh waste pile
+                    self.display_updated_waste_pile(-1)  # Refresh waste pile
                     self.update_moves(1)  # Increment move counter
                     return
 
@@ -291,7 +323,7 @@ class SolitaireApp(tk.Tk):
                     self.update_score(5)  # Increment score
                     self.moves_history.append(('move', card, -1, i, 'tableau'))  # Record the move
                     self.display_tableau()  # Refresh tableau
-                    self.display_waste_pile()  # Refresh waste pile
+                    self.display_updated_waste_pile(-1)  # Refresh waste pile
                     self.update_moves(1)  # Increment move counter
                     return
 
@@ -348,10 +380,24 @@ class SolitaireApp(tk.Tk):
     def is_top_card(self, card, pile_index):
         """
         Check if the card is the top card in the tableau pile.
+                
+        if self.vegas_mode:
+            if pile_index == -1:
+                pile = self.waste_pile
+            else:
+                pile = self.tableau[pile_index]
+            return pile and pile[-1] == card
+        else:
+            if pile_index == -1:
+                return False
+            pile = self.tableau[pile_index]
+            return pile and pile[-1] == card
         """
+
         if pile_index == -1:
-            return False
-        pile = self.tableau[pile_index]
+            pile = self.waste_pile
+        else:
+            pile = self.tableau[pile_index]
         return pile and pile[-1] == card
 
     def check_game_over(self):
@@ -361,8 +407,11 @@ class SolitaireApp(tk.Tk):
             self.display_game_over_message()
 
     def display_game_over_message(self):
-        self.canvas.create_text(550, 450, text="GAME OVER", font=('Helvetica', 36, 'bold'), fill='red',
-                                tags="game_over_text")
+        self.message = tk.Label(self, text="Congratulations! You've won!", bg='green', fg='white', font=('Helvetica', 36))
+        self.canvas.create_window(550, 275, anchor='n', window=self.message, height=200, width=2000)
+        #message = self.canvas.create_text(550, 300, text="Congratulations! You've won!", font=('Helvetica', 36, 'bold'), fill='red',
+        #                        tags="game_over_text")
+        #self.canvas.tag_raise(message)
 
     def update_moves(self, increment):
         self.moves += increment
@@ -517,13 +566,13 @@ class SolitaireApp(tk.Tk):
             # Destroy and recreate the waste pile frame for Vegas mode
             self.waste_pile_frame.destroy()
             self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(170, 100, anchor='nw', window=self.waste_pile_frame)
+            self.canvas.create_window(270, 105, anchor='nw', window=self.waste_pile_frame)
         else:
             self.vegas_mode_button.config(text="Switch to Vegas Mode")
             # Destroy and recreate the waste pile frame for Standard mode
             self.waste_pile_frame.destroy()
-            self.waste_pile_frame = tk.Frame(self, width=100, height=150, bg='green', bd=0, highlightthickness=0)
-            self.canvas.create_window(170, 100, anchor='nw', window=self.waste_pile_frame)
+            self.waste_pile_frame = tk.Frame(self, width=200, height=150, bg='green', bd=0, highlightthickness=0)
+            self.canvas.create_window(270, 105, anchor='nw', window=self.waste_pile_frame)
 
         # Redraw the waste pile after switching modes
         self.display_waste_pile()
